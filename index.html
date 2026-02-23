@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, user-scalable=no">
+  <title>Кликер</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #1c1c1c;
+      color: white;
+      font-family: 'Poppins', sans-serif;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+
+    #level {
+      font-size: 2em;
+      margin-bottom: 10px;
+      color: #ffc300;
+      text-shadow: 0 0 8px rgba(255, 195, 0, 0.6);
+    }
+
+    #score-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    #coin-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+
+    #score {
+      font-size: 3.5em;
+      user-select: none;
+    }
+
+    #coin {
+      width: 250px;
+      height: 250px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: transform 0.15s ease;
+      box-shadow: 0 0 40px rgba(255, 255, 255, 0.1);
+    }
+
+    #coin:active {
+      transform: scale(0.88);
+    }
+
+    #stats {
+      display: flex;
+      justify-content: space-between;
+      width: 250px;
+      margin-top: 30px;
+    }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      font-size: 1.2em;
+    }
+
+    .stat img {
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+
+    #boost-icon {
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      width: 40px;
+      height: 40px;
+    }
+
+    .particle {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      pointer-events: none;
+      animation: fly 1s ease-out forwards;
+    }
+
+    @keyframes fly {
+      from { transform: translate(0, 0); opacity: 1; }
+      to { transform: translate(var(--x), var(--y)); opacity: 0; }
+    }
+
+    #floating-boost {
+      position: absolute;
+      width: 100px;
+      height: 100px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="level">Level 0</div>
+
+  <div id="score-container">
+    <img id="coin-icon" src="coin-icon.jpg">
+    <div id="score">0</div>
+  </div>
+
+  <img id="coin" src="coin.png">
+
+  <div id="stats">
+    <div class="stat">
+      <img src="energy.jpg">
+      <span id="energy">1000/1000</span>
+    </div>
+    <img id="boost-icon" src="boost-icon.jpg">
+  </div>
+
+  <img id="floating-boost" src="floating-boost.jpg">
+
+  <script>
+    const scoreEl = document.getElementById("score");
+    const levelEl = document.getElementById("level");
+    const coin = document.getElementById("coin");
+    const energyEl = document.getElementById("energy");
+    const boostIcon = document.getElementById("boost-icon");
+    const floatingBoost = document.getElementById("floating-boost");
+
+    let score = parseInt(localStorage.getItem("score")) || 0;
+    let level = parseInt(localStorage.getItem("level")) || Math.floor(score / 1000);
+    let energy = 1000;
+    let maxEnergy = 1000;
+    let boostActive = false;
+
+    scoreEl.textContent = score;
+    levelEl.textContent = `Level ${level}`;
+
+    coin.addEventListener("click", (e) => {
+      if (energy < 5) return;
+
+      score += boostActive ? 15 : 1;
+      energy -= 5;
+
+      scoreEl.textContent = score;
+      energyEl.textContent = `${energy}/${maxEnergy}`;
+      localStorage.setItem("score", score);
+
+      let newLevel = Math.floor(score / 1000);
+      if (newLevel > level) {
+        level = newLevel;
+        levelEl.textContent = `Level ${level}`;
+        localStorage.setItem("level", level);
+      }
+
+      for (let i = 0; i < 8; i++) createParticle(e.clientX, e.clientY);
+    });
+
+    function createParticle(x, y) {
+      const p = document.createElement("img");
+      p.src = "particle.jpg";
+      p.className = "particle";
+      document.body.appendChild(p);
+
+      const a = Math.random() * Math.PI * 2;
+      p.style.left = x - 25 + "px";
+      p.style.top = y - 25 + "px";
+      p.style.setProperty("--x", Math.cos(a) * 120 + "px");
+      p.style.setProperty("--y", Math.sin(a) * 120 + "px");
+
+      setTimeout(() => p.remove(), 1000);
+    }
+
+    setInterval(() => {
+      if (energy < maxEnergy) {
+        energy += 5;
+        energyEl.textContent = `${energy}/${maxEnergy}`;
+      }
+    }, 2000);
+
+    setInterval(spawnFloatingBoost, 120000);
+
+    function spawnFloatingBoost() {
+      const x = Math.random() * (innerWidth - 100);
+      const y = Math.random() * (innerHeight - 100);
+
+      floatingBoost.style.left = x + "px";
+      floatingBoost.style.top = y + "px";
+      floatingBoost.style.opacity = 1;
+      floatingBoost.style.pointerEvents = "auto";
+
+      floatingBoost.onclick = () => {
+        floatingBoost.style.opacity = 0;
+        floatingBoost.style.pointerEvents = "none";
+        boostActive = true;
+        boostIcon.style.opacity = 1;
+        setTimeout(() => {
+          boostActive = false;
+          boostIcon.style.opacity = 0;
+        }, 15000);
+      };
+    }
+  </script>
+
+</body>
+</html>
